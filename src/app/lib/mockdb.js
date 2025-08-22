@@ -1,49 +1,54 @@
 /** @format */
 
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 // Pre-hash a password for all test users
 const passwordHash = bcrypt.hashSync('SecurePass123', 10);
 
-export let mockSessions = [];
+if (!global.mockSessions) {
+	global.mockSessions = [];
+}
+
+export const mockSessions = global.mockSessions;
+const SECRET = 'supersecret'; // for mock only
 
 export function buildSession(user) {
+	const payload = {
+		user_id: user.user_id,
+		email: user.email,
+		role: user.role,
+	};
+
+	const token = jwt.sign(payload, SECRET, { expiresIn: '1h' });
+
 	const session = {
 		session_id: `sess-${Date.now()}/${user.user_id.split('/')[1]}`,
 		user_id: user.user_id,
-		token: `mock_token_${user.role}_${Date.now()}`,
+		token, // ✅ real JWT
 		expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-		refresh_token: `${user.role}_refresh_token`,
+		refresh_token: jwt.sign({ user_id: user.user_id }, SECRET, {
+			expiresIn: '7d',
+		}), // optional refresh token
+		last_activity: new Date().toISOString(),
 	};
 
-	mockSessions.push(session);
+	global.mockSessions.push(session);
 	return session;
 }
 
 export function removeSession(session_id) {
-	mockSessions = mockSessions.filter((s) => s.session_id !== session_id);
+	global.mockSessions = global.mockSessions.filter(
+		(s) => s.session_id !== session_id
+	);
 }
 
-// ---------------- ADMIN DASHBOARD ----------------
-export const mockAdminDashboard = {
-	available_sections: [
-		{
-			name: 'Groups',
-			enabled: true,
-			action: 'navigate_to_groups',
-		},
-		{
-			name: 'I AM (Admin Console)',
-			enabled: false,
-			reason: 'Feature not implemented',
-		},
-		{
-			name: 'Identity & Organization',
-			enabled: false,
-			reason: 'Feature not implemented',
-		},
-	],
-};
+export function refreshSession(session) {
+	session.expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+	session.token = `refreshed_token_${Date.now()}`;
+	session.last_activity = new Date().toISOString();
+	return session;
+}
 
 // ---------------- USERS ----------------
 export const mockUsers = [

@@ -2,22 +2,14 @@
 
 // src/app/api/auth/login/route.js
 import { NextResponse } from 'next/server';
-import {
-	mockUsers,
-	mockGroups,
-	mockAdminDashboard,
-	buildSession,
-} from '@/app/lib/mockdb';
+import { mockUsers, mockGroups, buildSession } from '@/app/lib/mockdb';
 
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+// import jwt from 'jsonwebtoken';
 
 const SECRET = 'supersecret'; // for mock only
 
 // --- helpers ---
-function generateToken(payload) {
-	return jwt.sign(payload, SECRET, { expiresIn: '1h' });
-}
 
 function buildAssignedGroups(user) {
 	return user.assigned_groups
@@ -109,7 +101,6 @@ function buildLoginResponse(user) {
 			dashboard_route: 'admin',
 			frontend_action: 'show_admin_dashboard',
 			assigned_groups: buildAssignedGroups(user),
-			admin_dashboard: user.role === 'super_admin' ? mockAdminDashboard : null,
 		});
 	}
 
@@ -140,10 +131,8 @@ function buildLoginResponse(user) {
 export async function POST(req) {
 	try {
 		const { email, password } = await req.json();
-		// console.log(email, password);
 
 		const user = mockUsers.find((u) => u.email === email);
-		// console.log(user.password_hash);
 
 		if (!user) return invalidCredentialsResponse();
 
@@ -161,7 +150,6 @@ export async function POST(req) {
 		// mock password check
 		if (!isPasswordValid) {
 			user.failed_login_attempts = (user.failed_login_attempts || 0) + 1;
-			// console.log(user.password_hash);
 			if (user.failed_login_attempts >= 5) {
 				user.account_locked_until = new Date(
 					Date.now() + 30 * 60 * 1000
